@@ -2,6 +2,7 @@ services:
   # 1. The Web API Service
   - type: web
     name: csv-import-api
+    runtime: python
     env: python
     region: oregon
     plan: free
@@ -26,6 +27,7 @@ services:
   # 2. The Celery Background Worker
   - type: worker
     name: csv-import-worker
+    runtime: python
     env: python
     region: oregon
     plan: free
