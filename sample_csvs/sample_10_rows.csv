@@ -1,0 +1,11 @@
+SKU,Name,Description,Price,Stock,Category,Country of Origin
+SAMPLE-001,Sample Product 1,This is a test product for demonstration,19.99,100,Electronics,USA
+SAMPLE-002,Sample Product 2,Another test product,29.99,50,Books,UK
+SAMPLE-003,Sample Product 3,Third test item,9.99,200,Home & Garden,Canada
+sample-001,Sample Product 1 Updated,Testing case-insensitive upsert,24.99,150,Electronics,USA
+SAMPLE-004,Sample Product 4,Fourth item,14.99,75,Sports,USA
+SAMPLE-005,Sample Product 5,Fifth product,39.99,25,Electronics,Japan
+SAMPLE-006,Sample Product 6,Sixth test product,12.99,300,Books,USA
+SAMPLE-007,Sample Product 7,Seventh item,49.99,10,Home & Garden,Germany
+SAMPLE-008,Sample Product 8,Eighth product,8.99,500,Sports,China
+SAMPLE-009,Sample Product 9,Ninth test item,99.99,5,Electronics,USA
