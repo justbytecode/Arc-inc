@@ -3,6 +3,7 @@ Main FastAPI application entry point.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routers import imports, products, webhooks
 
 app = FastAPI(
     title="CSV Import Application",
@@ -18,6 +19,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register routers
+app.include_router(imports.router)
+app.include_router(products.router)
+app.include_router(webhooks.router)
 
 
 @app.get("/")
@@ -35,6 +41,8 @@ async def health():
     """Detailed health check."""
     return {
         "status": "ok",
-        "database": "not_configured",
-        "redis": "not_configured"
+        "api": "running",
+        "database": "configured",
+        "redis": "configured"
     }
+
