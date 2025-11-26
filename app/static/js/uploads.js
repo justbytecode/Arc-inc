@@ -3,15 +3,14 @@ class UploadManager {
     constructor() {
         this.uploadBtn = document.getElementById('upload-btn');
         this.fileInput = document.getElementById('csv-file');
-        this.uploadProgress = document.getElementById('upload-progress');
-        this.uploadProgressBar = document.getElementById('upload-progress-bar');
-        this.uploadProgressText = document.getElementById('upload-progress-text');
-        this.importProgress = document.getElementById('import-progress');
+        this.dropZone = document.getElementById('drop-zone');
+        this.fileNameDisplay = document.getElementById('file-name');
+
+        this.progressCard = document.getElementById('progress-card');
         this.importProgressBar = document.getElementById('import-progress-bar');
         this.importProgressText = document.getElementById('import-progress-text');
         this.importStatus = document.getElementById('import-status');
         this.importMessage = document.getElementById('import-message');
-        this.retryBtn = document.getElementById('retry-btn');
 
         this.statsElements = {
             totalRows: document.getElementById('total-rows'),
@@ -22,65 +21,90 @@ class UploadManager {
         };
 
         this.currentJobId = null;
-        this.eventSource = null;
-
         this.init();
     }
 
     init() {
         this.uploadBtn.addEventListener('click', () => this.startUpload());
-        this.retryBtn.addEventListener('click', () => this.startUpload());
+
+        // File input change
+        this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e.target.files[0]));
+
+        // Drag and drop events
+        this.dropZone.addEventListener('click', () => this.fileInput.click());
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            this.dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            this.dropZone.addEventListener(eventName, () => {
+                this.dropZone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            this.dropZone.addEventListener(eventName, () => {
+                this.dropZone.classList.remove('dragover');
+            });
+        });
+
+        this.dropZone.addEventListener('drop', (e) => {
+            const file = e.dataTransfer.files[0];
+            this.handleFileSelect(file);
+        });
     }
 
-    async startUpload() {
-        const file = this.fileInput.files[0];
-
-        if (!file) {
-            alert('Please select a CSV file');
-            return;
-        }
+    handleFileSelect(file) {
+        if (!file) return;
 
         if (!file.name.endsWith('.csv')) {
             alert('Only CSV files are allowed');
             return;
         }
 
+        this.selectedFile = file;
+        this.fileNameDisplay.textContent = file.name;
+        this.uploadBtn.disabled = false;
+
+        // Reset progress UI if starting new file
+        this.progressCard.classList.add('hidden');
+    }
+
+    async startUpload() {
+        if (!this.selectedFile) return;
+
         // Reset UI
         this.resetProgress();
-        this.uploadProgress.classList.remove('hidden');
+        this.progressCard.classList.remove('hidden');
         this.uploadBtn.disabled = true;
+        this.setImportStatus('uploading', 'Uploading file...');
 
         try {
-            // Upload file with progress tracking
-            const response = await API.uploadFile(file, (percent, loaded, total) => {
-                this.updateUploadProgress(percent);
+            // Upload file
+            const response = await API.uploadFile(this.selectedFile, (percent) => {
+                // We reuse the import progress bar for upload progress initially
+                this.updateProgressBar(percent);
+                this.importProgressText.textContent = `Uploading: ${Math.round(percent)}%`;
             });
 
             this.currentJobId = response.job_id;
 
-            // Hide upload progress, show import progress
-            this.uploadProgress.classList.add('hidden');
-            this.importProgress.classList.remove('hidden');
-
-            // Start SSE connection for import progress
-            this.connectToImportProgress(this.currentJobId);
+            // Start polling for import progress
+            this.pollImportStatus(this.currentJobId);
 
         } catch (error) {
             alert(`Upload failed: ${error.message}`);
             this.uploadBtn.disabled = false;
-            this.uploadProgress.classList.add('hidden');
+            this.setImportStatus('failed', error.message);
         }
     }
 
-    updateUploadProgress(percent) {
-        this.uploadProgressBar.style.width = `${percent}%`;
-        this.uploadProgressText.textContent = `${Math.round(percent)}%`;
-    }
-
-    connectToImportProgress(jobId) {
-        // Poll for status updates (SSE endpoint will be added in backend later)
-        // For now, use polling
-        this.pollImportStatus(jobId);
+    updateProgressBar(percent) {
+        this.importProgressBar.style.width = `${percent}%`;
     }
 
     async pollImportStatus(jobId) {
@@ -92,30 +116,26 @@ class UploadManager {
                 if (status.status === 'completed' || status.status === 'failed') {
                     clearInterval(pollInterval);
                     this.uploadBtn.disabled = false;
-
-                    if (status.status === 'failed') {
-                        this.retryBtn.classList.remove('hidden');
-                    }
+                    this.fileNameDisplay.textContent = 'Select new file';
+                    this.selectedFile = null;
                 }
             } catch (error) {
                 console.error('Failed to fetch import status:', error);
                 clearInterval(pollInterval);
                 this.setImportStatus('failed', 'Failed to fetch status');
                 this.uploadBtn.disabled = false;
-                this.retryBtn.classList.remove('hidden');
             }
-        }, 1000);  // Poll every second
+        }, 1000);
     }
 
     updateImportProgress(status) {
-        // Update status badge
-        this.setImportStatus(status.status, '');
+        this.setImportStatus(status.status, this.getStatusMessage(status.status));
 
-        // Update progress bar
         const percent = status.total_rows > 0
             ? (status.processed_rows / status.total_rows * 100)
             : 0;
-        this.importProgressBar.style.width = `${percent}%`;
+
+        this.updateProgressBar(percent);
         this.importProgressText.textContent = `${Math.round(percent)}%`;
 
         // Update stats
@@ -125,39 +145,38 @@ class UploadManager {
         this.statsElements.updatedRows.textContent = status.updated_rows || 0;
         this.statsElements.skippedRows.textContent = status.skipped_rows || 0;
 
-        // Update message
         if (status.error_message) {
             this.importMessage.textContent = status.error_message;
-        } else {
-            this.importMessage.textContent = this.getStatusMessage(status.status);
         }
     }
 
     setImportStatus(status, message) {
         this.importStatus.textContent = status;
-        this.importStatus.className = `status-badge ${status.toLowerCase()}`;
-        this.importMessage.textContent = message;
+        // Remove old status classes
+        this.importStatus.className = 'status-badge';
+        this.importStatus.classList.add(status.toLowerCase());
+
+        if (message) {
+            this.importMessage.textContent = message;
+        }
     }
 
     getStatusMessage(status) {
         const messages = {
-            'pending': 'Import job created, waiting to start...',
-            'uploading': 'Uploading file...',
-            'parsing': 'Parsing CSV file...',
-            'importing': 'Importing products into database...',
-            'completed': 'Import completed successfully!',
-            'failed': 'Import failed. Please check the error log.'
+            'pending': 'Initializing import job...',
+            'uploading': 'Uploading CSV file...',
+            'parsing': 'Analyzing CSV structure...',
+            'importing': 'Processing records...',
+            'completed': 'Import completed successfully',
+            'failed': 'Import process failed'
         };
         return messages[status] || status;
     }
 
     resetProgress() {
-        this.uploadProgressBar.style.width = '0%';
-        this.uploadProgressText.textContent = '0%';
-        this.importProgressBar.style.width = '0%';
+        this.updateProgressBar(0);
         this.importProgressText.textContent = '0%';
-        this.setImportStatus('pending', '');
-        this.retryBtn.classList.add('hidden');
+        this.setImportStatus('pending', 'Ready to start');
 
         Object.values(this.statsElements).forEach(el => {
             el.textContent = '0';

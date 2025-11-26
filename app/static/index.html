@@ -1,205 +1,307 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV Import Application</title>
+    <title>CSV Import Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
+
 <body>
-    <div class="container">
-        <header>
-            <h1>CSV Import Application</h1>
-            <p class="subtitle">Upload and manage product data with real-time progress tracking</p>
-        </header>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <i class="fa-solid fa-layer-group logo-icon"></i>
+                <h1>DataFlow</h1>
+            </div>
 
-        <nav class="tabs">
-            <button class="tab-btn active" data-tab="upload">Upload CSV</button>
-            <button class="tab-btn" data-tab="products">Products</button>
-            <button class="tab-btn" data-tab="webhooks">Webhooks</button>
-        </nav>
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="upload">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Import Data</span>
+                </button>
+                <button class="nav-item" data-tab="products">
+                    <i class="fa-solid fa-box-archive"></i>
+                    <span>Products</span>
+                </button>
+                <button class="nav-item" data-tab="webhooks">
+                    <i class="fa-solid fa-webhook"></i>
+                    <span>Webhooks</span>
+                </button>
+            </nav>
 
-        <!-- Upload Tab -->
-        <div class="tab-content active" id="upload-tab">
-            <div class="card">
-                <h2>Import CSV File</h2>
-                
-                <div class="upload-section">
-                    <input type="file" id="csv-file" accept=".csv" />
-                    <button id="upload-btn" class="btn btn-primary">Upload and Import</button>
-                </div>
-
-                <div id="upload-progress" class="progress-container hidden">
-                    <h3>Upload Progress</h3>
-                    <div class="progress-bar">
-                        <div id="upload-progress-bar" class="progress-fill"></div>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="avatar">A</div>
+                    <div class="user-details">
+                        <span class="username">Admin User</span>
+                        <span class="role">Workspace Owner</span>
                     </div>
-                    <p id="upload-progress-text">0%</p>
-                </div>
-
-                <div id="import-progress" class="progress-container hidden">
-                    <h3>Import Progress</h3>
-                    
-                    <div class="status-indicator">
-                        <span id="import-status" class="status-badge">Pending</span>
-                        <span id="import-message"></span>
-                    </div>
-
-                    <div class="progress-bar">
-                        <div id="import-progress-bar" class="progress-fill"></div>
-                    </div>
-                    <p id="import-progress-text">0%</p>
-
-                    <div class="progress-stats">
-                        <div class="stat">
-                            <span class="stat-label">Total Rows:</span>
-                            <span id="total-rows">0</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label">Processed:</span>
-                            <span id="processed-rows">0</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label">Imported:</span>
-                            <span id="imported-rows">0</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label">Updated:</span>
-                            <span id="updated-rows">0</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label">Skipped:</span>
-                            <span id="skipped-rows">0</span>
-                        </div>
-                    </div>
-
-                    <button id="retry-btn" class="btn btn-secondary hidden">Retry Import</button>
                 </div>
             </div>
-        </div>
+        </aside>
 
-        <!-- Products Tab -->
-        <div class="tab-content" id="products-tab">
-            <div class="card">
-                <h2>Product Management</h2>
-                
-                <div class="filters">
-                    <input type="text" id="filter-sku" placeholder="Filter by SKU" />
-                    <input type="text" id="filter-name" placeholder="Filter by Name" />
-                    <input type="text" id="filter-category" placeholder="Filter by Category" />
-                    <select id="filter-active">
-                        <option value="">All Status</option>
-                        <option value="true">Active</option>
-                        <option value="false">Inactive</option>
-                    </select>
-                    <button id="apply-filters-btn" class="btn btn-primary">Apply Filters</button>
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h2 id="page-title">Import Data</h2>
+                <div class="top-actions">
+                    <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+                    <button class="icon-btn"><i class="fa-regular fa-circle-question"></i></button>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Upload View -->
+                <div class="view-section active" id="upload-tab">
+                    <div class="dashboard-grid">
+                        <div class="card upload-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-file-csv"></i> Upload CSV</h3>
+                                <p>Drag and drop your file here or click to browse</p>
+                            </div>
+
+                            <div class="upload-zone" id="drop-zone">
+                                <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                                <p>Drop CSV file here or <span>browse</span></p>
+                                <input type="file" id="csv-file" accept=".csv" hidden />
+                            </div>
+
+                            <div class="upload-actions">
+                                <span id="file-name" class="file-name">No file selected</span>
+                                <button id="upload-btn" class="btn btn-primary" disabled>
+                                    <i class="fa-solid fa-play"></i> Start Import
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card progress-card hidden" id="progress-card">
+                            <div class="card-header">
+                                <h3>Import Status</h3>
+                                <span id="import-status" class="status-badge pending">Pending</span>
+                            </div>
+
+                            <div class="progress-wrapper">
+                                <div class="progress-info">
+                                    <span id="import-message">Initializing...</span>
+                                    <span id="import-progress-text">0%</span>
+                                </div>
+                                <div class="progress-track">
+                                    <div id="import-progress-bar" class="progress-fill"></div>
+                                </div>
+                            </div>
+
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <span class="stat-value" id="total-rows">0</span>
+                                    <span class="stat-label">Total Rows</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value" id="processed-rows">0</span>
+                                    <span class="stat-label">Processed</span>
+                                </div>
+                                <div class="stat-item success">
+                                    <span class="stat-value" id="imported-rows">0</span>
+                                    <span class="stat-label">Success</span>
+                                </div>
+                                <div class="stat-item warning">
+                                    <span class="stat-value" id="updated-rows">0</span>
+                                    <span class="stat-label">Updated</span>
+                                </div>
+                                <div class="stat-item error">
+                                    <span class="stat-value" id="skipped-rows">0</span>
+                                    <span class="stat-label">Skipped</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="actions">
-                    <button id="create-product-btn" class="btn btn-success">Create Product</button>
-                    <button id="delete-all-btn" class="btn btn-danger">Delete All Products</button>
-                    <select id="page-size">
-                        <option value="25">25 per page</option>
-                        <option value="50">50 per page</option>
-                        <option value="100">100 per page</option>
-                    </select>
+                <!-- Products View -->
+                <div class="view-section" id="products-tab">
+                    <div class="card table-card">
+                        <div class="toolbar">
+                            <div class="search-filters">
+                                <div class="input-group">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="filter-sku" placeholder="Search SKU..." />
+                                </div>
+                                <div class="input-group">
+                                    <i class="fa-solid fa-tag"></i>
+                                    <input type="text" id="filter-name" placeholder="Product Name..." />
+                                </div>
+                                <select id="filter-active" class="select-input">
+                                    <option value="">All Status</option>
+                                    <option value="true">Active</option>
+                                    <option value="false">Inactive</option>
+                                </select>
+                                <button id="apply-filters-btn" class="btn btn-secondary">
+                                    Filter
+                                </button>
+                            </div>
+                            <div class="toolbar-actions">
+                                <button id="delete-all-btn" class="btn btn-danger-outline">
+                                    <i class="fa-solid fa-trash"></i> Delete All
+                                </button>
+                                <button id="create-product-btn" class="btn btn-primary">
+                                    <i class="fa-solid fa-plus"></i> New Product
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="products-list" class="table-responsive">
+                            <!-- Table injected by JS -->
+                        </div>
+
+                        <div class="pagination-bar">
+                            <select id="page-size" class="select-sm">
+                                <option value="25">25 / page</option>
+                                <option value="50">50 / page</option>
+                                <option value="100">100 / page</option>
+                            </select>
+                            <div class="pagination" id="pagination"></div>
+                        </div>
+                    </div>
                 </div>
 
-                <div id="products-list" class="table-container"></div>
-
-                <div class="pagination" id="pagination"></div>
+                <!-- Webhooks View -->
+                <div class="view-section" id="webhooks-tab">
+                    <div class="card table-card">
+                        <div class="toolbar">
+                            <h3>Configured Webhooks</h3>
+                            <button id="create-webhook-btn" class="btn btn-primary">
+                                <i class="fa-solid fa-plus"></i> New Webhook
+                            </button>
+                        </div>
+                        <div id="webhooks-list" class="table-responsive">
+                            <!-- Table injected by JS -->
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        </main>
+    </div>
 
-        <!-- Webhooks Tab -->
-        <div class="tab-content" id="webhooks-tab">
-            <div class="card">
-                <h2>Webhook Management</h2>
-                
-                <button id="create-webhook-btn" class="btn btn-success">Create Webhook</button>
-
-                <div id="webhooks-list" class="table-container"></div>
-            </div>
-        </div>
-
-        <!-- Modal for Product Create/Edit -->
-        <div id="product-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="modal-close">&times;</span>
+    <!-- Modals -->
+    <div id="product-modal" class="modal-overlay hidden">
+        <div class="modal-container">
+            <div class="modal-header">
                 <h3 id="product-modal-title">Create Product</h3>
-                <form id="product-form">
-                    <input type="hidden" id="product-id" />
-                    <label>SKU *</label>
-                    <input type="text" id="product-sku" required />
-                    
-                    <label>Name *</label>
-                    <input type="text" id="product-name" required />
-                    
-                    <label>Description</label>
-                    <textarea id="product-description"></textarea>
-                    
-                    <label>Price *</label>
-                    <input type="number" id="product-price" step="0.01" required />
-                    
-                    <label>Stock *</label>
-                    <input type="number" id="product-stock" required />
-                    
-                    <label>Category</label>
-                    <input type="text" id="product-category" />
-                    
-                    <label>Country of Origin</label>
-                    <input type="text" id="product-country" />
-                    
-                    <label>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="product-form" class="modal-body">
+                <input type="hidden" id="product-id" />
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>SKU <span class="required">*</span></label>
+                        <input type="text" id="product-sku" required placeholder="e.g. PROD-001" />
+                    </div>
+                    <div class="form-group">
+                        <label>Name <span class="required">*</span></label>
+                        <input type="text" id="product-name" required placeholder="Product Name" />
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Description</label>
+                        <textarea id="product-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Price <span class="required">*</span></label>
+                        <div class="input-prefix">
+                            <span>$</span>
+                            <input type="number" id="product-price" step="0.01" required />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Stock <span class="required">*</span></label>
+                        <input type="number" id="product-stock" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <input type="text" id="product-category" />
+                    </div>
+                    <div class="form-group">
+                        <label>Country</label>
+                        <input type="text" id="product-country" />
+                    </div>
+                </div>
+                <div class="form-group checkbox-wrapper">
+                    <label class="switch">
                         <input type="checkbox" id="product-active" checked />
-                        Active
+                        <span class="slider round"></span>
                     </label>
-                    
-                    <div class="modal-actions">
-                        <button type="submit" class="btn btn-primary">Save</button>
-                        <button type="button" class="modal-cancel btn btn-secondary">Cancel</button>
-                    </div>
-                </form>
-            </div>
+                    <span class="label-text">Active Product</span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Product</button>
+                </div>
+            </form>
         </div>
+    </div>
 
-        <!-- Modal for Webhook Create/Edit -->
-        <div id="webhook-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="modal-close">&times;</span>
-                <h3 id="webhook-modal-title">Create Webhook</h3>
-                <form id="webhook-form">
-                    <input type="hidden" id="webhook-id" />
-                    <label>Name *</label>
-                    <input type="text" id="webhook-name" required />
-                    
-                    <label>URL *</label>
-                    <input type="url" id="webhook-url" required />
-                    
-                    <label>Events *</label>
-                    <div class="checkbox-group">
-                        <label><input type="checkbox" name="events" value="import.started" /> Import Started</label>
-                        <label><input type="checkbox" name="events" value="import.completed" /> Import Completed</label>
-                        <label><input type="checkbox" name="events" value="import.failed" /> Import Failed</label>
-                        <label><input type="checkbox" name="events" value="product.created" /> Product Created</label>
-                        <label><input type="checkbox" name="events" value="product.updated" /> Product Updated</label>
-                        <label><input type="checkbox" name="events" value="product.deleted" /> Product Deleted</label>
-                    </div>
-                    
-                    <label>HMAC Secret (optional)</label>
-                    <input type="text" id="webhook-secret" />
-                    
-                    <label>
-                        <input type="checkbox" id="webhook-enabled" checked />
-                        Enabled
-                    </label>
-                    
-                    <div class="modal-actions">
-                        <button type="submit" class="btn btn-primary">Save</button>
-                        <button type="button" class="modal-cancel btn btn-secondary">Cancel</button>
-                    </div>
-                </form>
+    <div id="webhook-modal" class="modal-overlay hidden">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="webhook-modal-title">Configure Webhook</h3>
+                <button class="modal-close">&times;</button>
             </div>
+            <form id="webhook-form" class="modal-body">
+                <input type="hidden" id="webhook-id" />
+                <div class="form-group">
+                    <label>Name <span class="required">*</span></label>
+                    <input type="text" id="webhook-name" required placeholder="e.g. Production Sync" />
+                </div>
+                <div class="form-group">
+                    <label>Endpoint URL <span class="required">*</span></label>
+                    <input type="url" id="webhook-url" required placeholder="https://api.example.com/webhook" />
+                </div>
+                <div class="form-group">
+                    <label>Events Subscription <span class="required">*</span></label>
+                    <div class="checkbox-grid">
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="events" value="import.completed" />
+                            <span>Import Completed</span>
+                        </label>
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="events" value="import.failed" />
+                            <span>Import Failed</span>
+                        </label>
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="events" value="product.created" />
+                            <span>Product Created</span>
+                        </label>
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="events" value="product.updated" />
+                            <span>Product Updated</span>
+                        </label>
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="events" value="product.deleted" />
+                            <span>Product Deleted</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>HMAC Secret (Optional)</label>
+                    <input type="text" id="webhook-secret" placeholder="Signing secret for security" />
+                </div>
+                <div class="form-group checkbox-wrapper">
+                    <label class="switch">
+                        <input type="checkbox" id="webhook-enabled" checked />
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="label-text">Enable Webhook</span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Configuration</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -210,4 +312,5 @@
     <script src="/static/js/webhooks.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
+
 </html>

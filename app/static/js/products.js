@@ -71,7 +71,7 @@ class ProductManager {
         const container = document.getElementById('products-list');
 
         if (data.items.length === 0) {
-            container.innerHTML = '<p>No products found.</p>';
+            container.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b;">No products found matching your criteria.</div>';
             return;
         }
 
@@ -91,15 +91,25 @@ class ProductManager {
                 <tbody>
                     ${data.items.map(product => `
                         <tr>
-                            <td>${this.escapeHtml(product.sku)}</td>
+                            <td style="font-family: monospace; font-weight: 500;">${this.escapeHtml(product.sku)}</td>
                             <td>${this.escapeHtml(product.name)}</td>
-                            <td>$${product.price}</td>
+                            <td>$${product.price.toFixed(2)}</td>
                             <td>${product.stock}</td>
                             <td>${this.escapeHtml(product.category || '-')}</td>
-                            <td>${product.active ? 'Active' : 'Inactive'}</td>
                             <td>
-                                <button class="btn-primary" onclick="productManager.openProductModal(${product.id})">Edit</button>
-                                <button class="btn-danger" onclick="productManager.deleteProduct(${product.id})">Delete</button>
+                                <span class="status-badge ${product.active ? 'active' : 'inactive'}">
+                                    ${product.active ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-btn-group">
+                                    <button class="btn-sm" onclick="productManager.openProductModal(${product.id})">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn-sm" onclick="productManager.deleteProduct(${product.id})">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `).join('')}
@@ -123,7 +133,7 @@ class ProductManager {
 
         // Previous button
         if (page > 1) {
-            pages += `<button onclick="productManager.goToPage(${page - 1})">Previous</button>`;
+            pages += `<button onclick="productManager.goToPage(${page - 1})"><i class="fa-solid fa-chevron-left"></i></button>`;
         }
 
         // Page numbers
@@ -132,13 +142,13 @@ class ProductManager {
                 const active = i === page ? 'active' : '';
                 pages += `<button class="${active}" onclick="productManager.goToPage(${i})">${i}</button>`;
             } else if (i === page - 3 || i === page + 3) {
-                pages += '<span>...</span>';
+                pages += '<span style="padding: 0 8px; color: #94a3b8;">...</span>';
             }
         }
 
         // Next button
         if (page < total_pages) {
-            pages += `<button onclick="productManager.goToPage(${page + 1})">Next</button>`;
+            pages += `<button onclick="productManager.goToPage(${page + 1})"><i class="fa-solid fa-chevron-right"></i></button>`;
         }
 
         container.innerHTML = pages;

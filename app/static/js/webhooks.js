@@ -37,7 +37,7 @@ class WebhookManager {
         const container = document.getElementById('webhooks-list');
 
         if (webhooks.length === 0) {
-            container.innerHTML = '<p>No webhooks configured.</p>';
+            container.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b;">No webhooks configured.</div>';
             return;
         }
 
@@ -55,15 +55,33 @@ class WebhookManager {
                 <tbody>
                     ${webhooks.map(webhook => `
                         <tr>
-                            <td>${this.escapeHtml(webhook.name)}</td>
-                            <td>${this.escapeHtml(webhook.url)}</td>
-                            <td>${webhook.events.join(', ')}</td>
-                            <td>${webhook.enabled ? '<span style="color: green;">Enabled</span>' : '<span style="color: red;">Disabled</span>'}</td>
+                            <td style="font-weight: 500;">${this.escapeHtml(webhook.name)}</td>
+                            <td style="font-family: monospace; font-size: 13px;">${this.escapeHtml(webhook.url)}</td>
                             <td>
-                                <button class="btn-primary" onclick="webhookManager.openWebhookModal(${webhook.id})">Edit</button>
-                                <button class="btn-secondary" onclick="webhookManager.testWebhook(${webhook.id})">Test</button>
-                                <button class="btn-secondary" onclick="webhookManager.viewLogs(${webhook.id})">Logs</button>
-                                <button class="btn-danger" onclick="webhookManager.deleteWebhook(${webhook.id})">Delete</button>
+                                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                    ${webhook.events.map(e => `<span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${e}</span>`).join('')}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="status-badge ${webhook.enabled ? 'active' : 'inactive'}">
+                                    ${webhook.enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-btn-group">
+                                    <button class="btn-sm" onclick="webhookManager.openWebhookModal(${webhook.id})" title="Edit">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn-sm" onclick="webhookManager.testWebhook(${webhook.id})" title="Test Delivery">
+                                        <i class="fa-solid fa-paper-plane"></i>
+                                    </button>
+                                    <button class="btn-sm" onclick="webhookManager.viewLogs(${webhook.id})" title="View Logs">
+                                        <i class="fa-solid fa-list-ul"></i>
+                                    </button>
+                                    <button class="btn-sm" onclick="webhookManager.deleteWebhook(${webhook.id})" title="Delete">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `).join('')}
