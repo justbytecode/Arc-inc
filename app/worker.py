@@ -182,23 +182,193 @@ def import_csv_task(self, job_id: str, file_path: str):
 def delete_all_products_task(self):
     """
     Delete all products in batches with progress tracking.
-    Will be fully implemented in Step 7.
+    Uses task state updates for real-time progress.
     """
-    # TODO: Implement in Step 7
-    pass
+    db = SessionLocal()
+    
+    try:
+        # Get total count
+        total_count = db.query(Product).count()
+        
+        if total_count == 0:
+            return {
+                "status": "completed",
+                "message": "No products to delete",
+                "deleted": 0
+            }
+        
+        deleted_count = 0
+        batch_size = settings.BATCH_SIZE
+        
+        # Update task state
+        self.update_state(
+            state='PROGRESS',
+            meta={
+                'current': 0,
+                'total': total_count,
+                'status': 'Deleting products...'
+            }
+        )
+        
+        # Delete in batches
+        while True:
+            # Get batch of IDs
+            product_ids = db.query(Product.id).limit(batch_size).all()
+            
+            if not product_ids:
+                break
+            
+            # Extract IDs from tuples
+            ids_to_delete = [pid[0] for pid in product_ids]
+            
+            # Delete batch
+            db.query(Product).filter(Product.id.in_(ids_to_delete)).delete(synchronize_session=False)
+            db.commit()
+            
+            deleted_count += len(ids_to_delete)
+            
+            # Update progress
+            self.update_state(
+                state='PROGRESS',
+                meta={
+                    'current': deleted_count,
+                    'total': total_count,
+                    'status': f'Deleted {deleted_count}/{total_count} products...'
+                }
+            )
+        
+        return {
+            "status": "completed",
+            "message": f"Successfully deleted {deleted_count} products",
+            "deleted": deleted_count
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise Exception(f"Bulk delete failed: {str(e)}")
+    
+    finally:
+        db.close()
+
 
 
 @celery_app.task(name="deliver_webhook_task", bind=True, max_retries=5)
 def deliver_webhook_task(self, webhook_log_id: int):
     """
-    Deliver webhook with retry logic.
-    Will be fully implemented in Step 8.
+    Deliver webhook with retry logic and exponential backoff.
     
     Args:
         webhook_log_id: ID of the webhook log entry to deliver
     """
-    # TODO: Implement in Step 8
-    pass
+    import requests
+    import hmac
+    import hashlib
+    from datetime import datetime, timedelta
+    
+    db = SessionLocal()
+    
+    try:
+        # Get webhook log
+        log = db.query(WebhookLog).filter(WebhookLog.id == webhook_log_id).first()
+        if not log:
+            raise Exception(f"Webhook log {webhook_log_id} not found")
+        
+        # Get webhook configuration
+        webhook = db.query(Webhook).filter(Webhook.id == log.webhook_id).first()
+        if not webhook:
+            raise Exception(f"Webhook {log.webhook_id} not found")
+        
+        if not webhook.enabled:
+            log.error_message = "Webhook is disabled"
+            db.commit()
+            return {"status": "skipped", "reason": "webhook disabled"}
+        
+        # Prepare payload
+        payload = log.payload
+        headers = {
+            'Content-Type': 'application/json',
+            'User-Agent': 'CSV-Import-Application/1.0',
+            'X-Webhook-Event': log.event_type
+        }
+        
+        # Add HMAC signature if secret is configured
+        if webhook.hmac_secret:
+            signature = hmac.new(
+                webhook.hmac_secret.encode('utf-8'),
+                payload.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
+            headers['X-Webhook-Signature'] = f'sha256={signature}'
+        
+        # Increment attempt count
+        log.attempt += 1
+        db.commit()
+        
+        # Make HTTP request
+        try:
+            response = requests.post(
+                webhook.url,
+                data=payload,
+                headers=headers,
+                timeout=settings.WEBHOOK_TIMEOUT
+            )
+            
+            # Log response
+            log.status_code = response.status_code
+            log.response_body = response.text[:1000]  # Store first 1000 chars
+            
+            # Check if successful (2xx status codes)
+            if 200 <= response.status_code < 300:
+                log.delivered_at = datetime.utcnow()
+                log.next_retry_at = None
+                db.commit()
+                
+                return {
+                    "status": "delivered",
+                    "status_code": response.status_code,
+                    "attempt": log.attempt
+                }
+            else:
+                # Non-2xx response, schedule retry
+                raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
+                
+        except requests.RequestException as e:
+            # Network error, schedule retry
+            error_msg = f"Request failed: {str(e)}"
+            log.error_message = error_msg
+            
+            # Schedule retry if attempts remain
+            if log.attempt < log.max_attempts:
+                # Exponential backoff
+                retry_delays = settings.WEBHOOK_RETRY_DELAYS
+                delay_index = min(log.attempt - 1, len(retry_delays) - 1)
+                delay_seconds = retry_delays[delay_index]
+                
+                log.next_retry_at = datetime.utcnow() + timedelta(seconds=delay_seconds)
+                db.commit()
+                
+                # Retry task
+                self.retry(countdown=delay_seconds, exc=e)
+            else:
+                # Max retries exceeded
+                log.error_message = f"Max retries exceeded. Last error: {error_msg}"
+                db.commit()
+                
+                return {
+                    "status": "failed",
+                    "error": "Max retries exceeded",
+                    "attempts": log.attempt
+                }
+    
+    except Exception as e:
+        if log:
+            log.error_message = str(e)
+            db.commit()
+        raise
+    
+    finally:
+        db.close()
+
 
 
 def queue_webhook_event(db, event_type: str, payload: dict):
@@ -229,6 +399,10 @@ def queue_webhook_event(db, event_type: str, payload: dict):
                 max_attempts=settings.WEBHOOK_MAX_RETRIES
             )
             db.add(log)
+            db.flush()  # Get the log ID
+            
+            # Enqueue delivery task
+            deliver_webhook_task.delay(log.id)
     
     db.commit()
 

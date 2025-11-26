@@ -174,9 +174,12 @@ async def test_webhook(
     db: Session = Depends(get_db)
 ):
     """
-    Test webhook delivery.
-    Will be fully implemented in Step 8.
+    Test webhook delivery by sending a test event.
     """
+    import requests
+    import json
+    import time
+    
     webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
     
     if not webhook:
@@ -185,11 +188,61 @@ async def test_webhook(
             detail=f"Webhook {webhook_id} not found"
         )
     
-    # TODO: Implement actual webhook delivery in Step 8
-    return {
-        "success": False,
-        "error": "Test delivery will be implemented in Step 8"
+    # Create test payload
+    test_payload = {
+        "event": "webhook.test",
+        "timestamp": datetime.utcnow().isoformat(),
+        "data": {
+            "message": "This is a test webhook delivery"
+        }
     }
+    
+    headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'CSV-Import-Application/1.0',
+        'X-Webhook-Event': 'webhook.test'
+    }
+    
+    # Add HMAC signature if configured
+    if webhook.hmac_secret:
+        import hmac
+        import hashlib
+        
+        payload_str = json.dumps(test_payload)
+        signature = hmac.new(
+            webhook.hmac_secret.encode('utf-8'),
+            payload_str.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        headers['X-Webhook-Signature'] = f'sha256={signature}'
+    
+    try:
+        start_time = time.time()
+        response = requests.post(
+            webhook.url,
+            json=test_payload,
+            headers=headers,
+            timeout=30
+        )
+        end_time = time.time()
+        
+        response_time_ms = (end_time - start_time) * 1000
+        
+        return {
+            "success": 200 <= response.status_code < 300,
+            "status_code": response.status_code,
+            "response_time_ms": round(response_time_ms, 2),
+            "error": None if 200 <= response.status_code < 300 else response.text[:200]
+        }
+        
+    except requests.RequestException as e:
+        return {
+            "success": False,
+            "status_code": None,
+            "response_time_ms": None,
+            "error": str(e)
+        }
+
 
 
 @router.get("/{webhook_id}/logs", response_model=List[WebhookLogResponse])

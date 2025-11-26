@@ -179,8 +179,8 @@ async def delete_all_products(
     db: Session = Depends(get_db)
 ):
     """
-    Delete all products (protected by typed confirmation).
-    Will be implemented as background job in Step 7.
+    Delete all products in background (protected by typed confirmation).
+    Returns task_id for progress tracking.
     """
     if confirmation != "DELETE ALL":
         raise HTTPException(
@@ -188,8 +188,14 @@ async def delete_all_products(
             detail="Confirmation string must be 'DELETE ALL'"
         )
     
-    # TODO: Implement as background job in Step 7
+    from app.worker import delete_all_products_task
+    
+    # Enqueue background task
+    task = delete_all_products_task.delay()
+    
     return {
-        "message": "Bulk delete functionality will be implemented in Step 7",
-        "status": "not_implemented"
+        "message": "Bulk delete job started",
+        "task_id": task.id,
+        "status": "processing"
     }
+
