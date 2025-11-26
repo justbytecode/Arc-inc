@@ -23,13 +23,35 @@ This document tracks the AI assistance used during the development of this proje
 - Test configuration with fixtures
 - This documentation file
 
-## Technology Stack Decisions
+## Technology Stack Decisions (Step 1)
 
-*Will be documented in Step 1*
+### Decision Rationale
+**Date**: 2025-11-26
 
-## Implementation Notes
+**Selected Stack**:
+- Web Framework: FastAPI 0.104+
+- ORM: SQLAlchemy 2.0 + Alembic
+- Background Worker: Celery 5.3
+- Message Broker & Cache: Redis 7
+- Database: PostgreSQL 15
+- Frontend: Vanilla JavaScript with SSE (Server-Sent Events)
 
-*Additional AI-assisted development notes will be added as the project progresses*
+**Key Justifications**:
+
+1. **FastAPI**: Chosen for async/await support essential for streaming CSV uploads and SSE connections. The async capability allows concurrent handling of file uploads while sending real-time progress updates to the UI.
+
+2. **SQLAlchemy + Alembic**: Selected for fine-grained control over batch inserts (using `COPY` to temp table + `INSERT ... ON CONFLICT` for upsert). SQLAlchemy 2.0's explicit transaction control is critical for batched commits (1000 rows per batch) to avoid long-running transactions.
+
+3. **Celery**: Preferred over Dramatiq for its mature ecosystem, built-in task scheduling (needed for webhook retry backoff), and monitoring tools (Flower). Production-grade reliability is prioritized over simplicity.
+
+4. **Redis**: Serves dual purpose - Celery broker AND real-time progress cache for SSE updates. This architectural choice reduces infrastructure complexity while providing in-memory performance for progress tracking.
+
+5. **Vanilla JS + SSE**: Avoided React/build tooling to keep frontend simple. SSE is ideal for unidirectional server→client progress updates, works over HTTP (no proxy issues), and has native browser support.
+
+**Tradeoffs Considered**:
+- WebSocket vs SSE: SSE chosen because it's simpler, HTTP-based, and sufficient for one-way progress streaming
+- Celery vs Dramatiq: Celery chosen for production tooling despite higher complexity
+- React vs Vanilla JS: Vanilla chosen to match "minimal frontend" requirement and avoid build step
 
 ---
 
