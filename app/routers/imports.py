@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional
 import uuid
+import os
+import shutil
 from datetime import datetime
 
 from app.database import get_db
@@ -12,6 +14,7 @@ from app.auth import verify_token
 from app.models import ImportJob
 from app.schemas import ImportJobResponse
 from app.worker import import_csv_task
+from app.config import settings
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 
@@ -35,10 +38,31 @@ async def create_import(
     # Generate unique job ID
     job_id = str(uuid.uuid4())
     
+    # Ensure upload directory exists
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    
+    # Save uploaded file
+    file_path = os.path.join(settings.UPLOAD_DIR, f"{job_id}.csv")
+    
+    try:
+        # Read and save file
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Get file size
+        file_size = os.path.getsize(file_path)
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save uploaded file: {str(e)}"
+        )
+    
     # Create import job record
     import_job = ImportJob(
         job_id=job_id,
         filename=file.filename,
+        file_size=file_size,
         status="pending",
         started_at=datetime.utcnow()
     )
@@ -47,13 +71,22 @@ async def create_import(
     db.commit()
     db.refresh(import_job)
     
-    # TODO: Save file and enqueue Celery task in Step 5
-    # For now, just return the job_id
+    # Enqueue Celery task for background processing
+    try:
+        import_csv_task.delay(job_id, file_path)
+    except Exception as e:
+        import_job.status = "failed"
+        import_job.error_message = f"Failed to queue import task: {str(e)}"
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to start import: {str(e)}"
+        )
     
     return {
         "job_id": job_id,
         "status": "pending",
-        "message": "Import job created (processing not yet implemented)"
+        "message": "Import job queued for processing"
     }
 
 
@@ -75,3 +108,4 @@ async def get_import_status(
         )
     
     return import_job
+
